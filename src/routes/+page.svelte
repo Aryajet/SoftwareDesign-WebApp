@@ -67,14 +67,18 @@
       console.error('Unexpected error:', error);
       errorMessage = 'An unexpected error occurred. Please try again.';
     }
-    async function signOut() {
-        const { error } = await supabase.auth.signOut()
-        console.log(error)
-}
-  </script>
-  
-  <body>
-    {#if !session?.user}
+  }
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    console.log(error);
+  }
+
+  $: status = !!user?.id;
+</script>
+
+<body>
+  {#if status}
     <div>You are Signed In!</div>
   {:else}
     <div class="flex justify-center">
