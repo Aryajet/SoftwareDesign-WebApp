@@ -1,7 +1,48 @@
-<script>
-  import { supabase } from "$lib/supabaseClient";
+<script lang="ts">
+  import type { PageData } from './$types';
+  import { supabase } from '$lib/supabaseClient';
+
+  export let data: PageData;
+  let { user } = data;
 
   // Reactive variables
+
+    // Variables for profile information
+  let full_name = '';
+  let first_name = '';
+  let last_name = '';
+  let username = '';
+  let role: 'Volunteer' | 'Organizer';
+  let email = '';
+
+  // Variables for availability
+  let tempAvailabilityDates: string[] = [];
+  let selectedSkills: string[] = [];
+
+  async function loadProfile() {
+    if (user) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, full_name, username, availability, skills, role, email')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error loading profile:', error.message);
+      } else if (profile) {
+        full_name = profile.full_name || '';
+        first_name = profile.first_name || '';
+        last_name = profile.last_name || '';
+        username = profile.username || '';
+        tempAvailabilityDates = profile.availability || [];
+        selectedSkills = profile.skills || [];
+        role = profile.role;
+        email = user.user_metadata.email || '';
+        nameFilter = full_name;
+      }
+    }
+  }
+
   let eventHistory2 = [];
   let nameFilter = '';
   let eventFilter = '';
@@ -86,61 +127,103 @@
 
   // Fetch events on component mount
   fetchEvents();
+  loadProfile();
 </script>
 
-<h2 class="text-xl font-semibold mb-4 text-center">Volunteer History</h2>
+<h2 class="text-xl font-semibold mb-4 text-center">Volunteer History {role}</h2>
+{#if role=="Organizer"}
+  <div class="overflow-x-auto">
+    <div class="flex items-center mb-4 space-x-2 justify-center items-center">
+      <label for="nameFilter" class="label">
+        <span class="label-text">Filter by Name:</span>
+      </label>
+      <input
+        type="text"
+        id="nameFilter"
+        bind:value={nameFilter}
+        class="input input-bordered w-64"
+      />
+      <button class="btn btn-primary w-20" on:click={applyFilter}>Apply</button>
+      <p class="w-40"></p>
+      <label for="eventFilter" class="label">
+        <span class="label-text">Filter by Event:</span>
+      </label>
+      <input
+        type="text"
+        id="eventFilter"
+        bind:value={eventFilter}
+        class="input input-bordered w-64"
+      />
+      <button class="btn btn-primary w-20" on:click={applyFilter2}>Apply</button>
+    </div>
+    <table class="table w-full bg-base-100">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Event</th>
+          <th>Description</th>
+          <th>Date</th>
+          <th>Skills</th>
+          <th>Urgency</th>
+          <th>Location</th>
+          <th>Participation</th>
+          <th>Performance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each eventHistory2 as event1}
+          <tr>
+            <td>{event1.name}</td>
+            <td>{event1.event}</td>
+            <td>{event1.description}</td>
+            <td>{event1.date}</td>
+            <td>{event1.skills.join(', ')}</td>
+            <td>{event1.urgency}</td>
+            <td>{event1.location}</td>
+            <td>{event1.participation}</td>
+            <td>{event1.performance}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+{:else if role=="Volunteer"}
 <div class="overflow-x-auto">
   <div class="flex items-center mb-4 space-x-2 justify-center items-center">
     <label for="nameFilter" class="label">
-      <span class="label-text">Filter by Name:</span>
+      <span class="label-text">Filter by Your Name:</span>
     </label>
-    <input
-      type="text"
-      id="nameFilter"
-      bind:value={nameFilter}
-      class="input input-bordered w-64"
-    />
-    <button class="btn btn-primary w-20" on:click={applyFilter}>Apply</button>
-    <p class="w-40"></p>
-    <label for="eventFilter" class="label">
-      <span class="label-text">Filter by Event:</span>
-    </label>
-    <input
-      type="text"
-      id="eventFilter"
-      bind:value={eventFilter}
-      class="input input-bordered w-64"
-    />
-    <button class="btn btn-primary w-20" on:click={applyFilter2}>Apply</button>
-  </div>
-  <table class="table w-full bg-base-100">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Event</th>
-        <th>Description</th>
-        <th>Date</th>
-        <th>Skills</th>
-        <th>Urgency</th>
-        <th>Location</th>
-        <th>Participation</th>
-        <th>Performance</th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each eventHistory2 as event1}
-        <tr>
-          <td>{event1.name}</td>
-          <td>{event1.event}</td>
-          <td>{event1.description}</td>
-          <td>{event1.date}</td>
-          <td>{event1.skills.join(', ')}</td>
-          <td>{event1.urgency}</td>
-          <td>{event1.location}</td>
-          <td>{event1.participation}</td>
-          <td>{event1.performance}</td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
-</div>
+    <button class="btn btn-primary w-50" on:click={applyFilter}>Apply</button>
+      </div>
+      <table class="table w-full bg-base-100">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Event</th>
+            <th>Description</th>
+            <th>Date</th>
+            <th>Skills</th>
+            <th>Urgency</th>
+            <th>Location</th>
+            <th>Participation</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each eventHistory2 as event1}
+            <tr>
+              <td>{event1.name}</td>
+              <td>{event1.event}</td>
+              <td>{event1.description}</td>
+              <td>{event1.date}</td>
+              <td>{event1.skills.join(', ')}</td>
+              <td>{event1.urgency}</td>
+              <td>{event1.location}</td>
+              <td>{event1.participation}</td>
+              <td>{event1.performance}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+{/if}
