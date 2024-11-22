@@ -373,8 +373,8 @@
 
   </div>
   {#if role=="Organizer"}
-    <div class="container">
-        <h1>Generate PDF and CSV with Event and Volunteer Data</h1>
+    <div>
+        <h2 class="text-xl font-semibold mb-4 text-center">Volunteer History {role}</h2>
         <div class="button-container">
         <button on:click={generateCombinedPDF} class="btn btn-primary">Download Combined PDF</button>
         <button on:click={generateCombinedCSV} class="btn btn-primary">Download Combined CSV</button>
@@ -382,7 +382,7 @@
     </div>
     {/if}
     {#if role=="Volunteer"}
-    <div class="container">
+    <div>
         <h2>You Do Not Have The Permission To Generate PDF and CSV with Event and Volunteer Data</h2>
     </div>
     {/if}
