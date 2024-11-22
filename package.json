@@ -15,6 +15,7 @@
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
+		"@types/pdfmake": "^0.2.9",
 		"autoprefixer": "^10.4.20",
 		"daisyui": "^4.12.10",
 		"postcss": "^8.4.47",
@@ -29,6 +30,9 @@
 	"type": "module",
 	"dependencies": {
 		"@supabase/ssr": "^0.5.1",
-		"@supabase/supabase-js": "^2.46.1"
+		"@supabase/supabase-js": "^2.46.1",
+		"jspdf": "^2.5.2",
+		"jspdf-autotable": "^3.8.4",
+		"pdfmake": "^0.1.70"
 	}
 }

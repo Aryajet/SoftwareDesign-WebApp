@@ -50,6 +50,7 @@
       <a href="/volunteerHistory" class="btn btn-ghost">Volunteer History</a>
       <a href="/eventManagement" class="btn btn-ghost">Event Management</a>
       <a href="/notificationSystem" class="btn btn-ghost">Notification System</a>
+      <a href="/createFile" class="btn btn-ghost">File Creator</a>
     </div>
   
     <div class="navbar-end"></div>
