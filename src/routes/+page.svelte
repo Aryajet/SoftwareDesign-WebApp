@@ -3,8 +3,10 @@
     import "tailwindcss/tailwind.css";
     import { supabase } from "$lib/supabaseClient";
     import { goto } from "$app/navigation";
+	import type { PageData } from "./$types";
   
-    export let session: any;
+    export let data: PageData
+    let { user } = data
     let email = '';
     let password = '';
     async function signInWithEmail() {
@@ -47,10 +49,12 @@
         const { error } = await supabase.auth.signOut()
         console.log(error)
 }
+$: status = !!user?.id
   </script>
   
   <body>
-    {#if !session?.user}
+    <div>{status}</div>
+    {#if status}
     <div>You are Signed In!</div>
     {:else}
     

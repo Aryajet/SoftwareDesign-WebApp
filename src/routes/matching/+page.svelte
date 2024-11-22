@@ -1,249 +1,262 @@
 <script lang="ts">
-    // Enum for volunteer skills
-  
-    import type { PageData } from './$types';
     import { supabase } from '$lib/supabaseClient';
-    
-      export let data: PageData;
-      let { user } = data;
-      let isLoading = true;
-    
-      // Variables for profile information
-      let full_name = '';
-      let first_name = '';
-      let last_name = '';
-      let username = '';
-      let role: 'Volunteer' | 'Organizer' | '' = ''; // Start with an empty string if necessary
-      let email = '';
-      // Variables for availability
-      let tempAvailabilityDates: string[] = [];
-      // Variables for skills
-      let selectedSkills: string[] = [];
-      let state = 'Texas';
-    
-      async function loadProfile() 
-      {
-        if (user) {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, full_name, username, availability, skills, role, email, state')
-            .eq('id', user.id)
-            .single();
-    
-          if (error) {
-            console.error('Error loading profile:', error.message);
-          } else if (profile) {
-            full_name = profile.full_name || '';
-            first_name = profile.first_name || '';
-            last_name = profile.last_name || '';
-            username = profile.username || '';
-            tempAvailabilityDates = profile.availability || [];
-            selectedSkills = [...(profile.skills || []), null];
-            role = profile.role || '';
-            email = user.user_metadata.email || '';
-            state = profile.state;
-          }
-        }
-      }
 
-      loadProfile();
-
-      class Event 
-      {
-        event_id: string;
-        eventName: string;
-        eventDescription: string;
-        location: string;
-        requiredSkill1: string;
-        requiredSkill2: string;
-        requiredSkill3: string;
-        urgency: string;
-        eventDate: string;
-
-        constructor(event_id: string, eventName: string, eventDescription: string, location: string, requiredSkill1: string, requiredSkill2: string, requiredSkill3: string, urgency: string, eventDate: string) {
-        this.event_id = event_id;
-        this.eventName = eventName;
-        this.eventDescription = eventDescription;
-        this.location = location;
-        this.requiredSkill1 = requiredSkill1;
-        this.requiredSkill2 = requiredSkill2;
-        this.requiredSkill3 = requiredSkill3;
-        this.urgency = urgency;
-        this.eventDate = eventDate;
-        }
-      }
-
-      let events: Event[] = []; // Array to store events fetched from Supabase
-      let specificEvents: Event[] = []; // Array to store events fetched from Supabase
-
-
-      async function matchEvents() {
-        const { data, error } = await supabase
-            .from('Event_Table') // Make sure this matches your table name
-            .select('event_id, event_name, description, location, required_skill1, date, urgency, required_skill2, required_skill3, notifications')
-            .order('date', { ascending: true });
-            if (error) {
-            console.error('Error fetching events:', error.message);
-            return;
-            }
-            console.log("Events fetched successfully:", data);
-            events = data.map(event => new Event(
-                event.event_id,
-                event.event_name,
-                event.description,
-                event.location,
-                event.required_skill1,
-                event.required_skill2,
-                event.required_skill3,
-                event.urgency,
-                event.date
-            ));
-            specificEvents = filterSpecificEvent();
-            isLoading = false;
-            //specificEvents = events;
-      }
-      
-      matchEvents();
-
-      function filterSpecificEvent() {
-            return events.filter(event => event.location === state && tempAvailabilityDates.includes(event.eventDate)
-             && selectedSkills.includes(event.requiredSkill1) && selectedSkills.includes(event.requiredSkill2) && selectedSkills.includes(event.requiredSkill3));
-        }
-
-    let eventToFilter;
-    
-    function findVolunteers()
-    {
-        let stateM = eventToFilter.location;
-        let dateM = eventToFilter.eventDate;
-        let skill1M = eventToFilter.requiredSkill1;
-        let skill2M = eventToFilter.requiredSkill2;
-        let skill3M = eventToFilter.requiredSkill3;
-        specificVolunteers = filterSpecificVolunteer(stateM, dateM, skill1M, skill2M, skill3M);
+    interface Event {
+        event_id: number;
+        event_name: string;
+        description: string | null;
+        location: string | null;
+        required_skill1: string | null;
+        required_skill2: string | null;
+        required_skill3: string | null;
+        date: string | null;
+        urgency: string | null;
+        volunteers: string[] | null;
     }
 
-    class Volunteer
-    {
+    interface Volunteer {
         id: string;
-        fullName: string;
-        availability: string[];
-        location: string;
-        skills: string[];
+        full_name: string | null;
+        location: string | null;
+        availability: string[] | null;
+        skills: string[] | null;
+    }
 
-        constructor(id: string, fullName: string, availability: string[], location: string, skills: string[]) 
-        {
-            this.id = id;
-            this.fullName = fullName;
-            this.availability = availability;
-            this.location = location;
-            this.skills = [...(skills || []), null];
+    let userRole: 'Volunteer' | 'Organizer' | '' = '';
+    let events: Event[] = [];
+    let filteredEvents: Event[] = [];
+    let userId: string | null = null;
+    let userSkills: string[] = [];
+    let matchedVolunteers: Volunteer[] = [];
+    let selectedEvent: Event | null = null;
+    let selectedVolunteerIds: Set<string> = new Set();
+    let isLoading = true;
+
+
+    async function fetchUserProfile() {
+        const { data: user, error } = await supabase.auth.getUser();
+        if (error) {
+            console.error('Error fetching user:', error.message);
+            return;
+        }
+
+        if (user) {
+            userId = user.user?.id || null;
+
+            const { data, error: profileError } = await supabase
+                .from('profiles')
+                .select('role, skills')
+                .eq('id', userId)
+                .single();
+
+            if (profileError) {
+                console.error('Error fetching user profile:', profileError.message);
+                return;
+            }
+
+            userRole = profileError ? '' : (data.role as 'Volunteer' | 'Organizer');
+            userSkills = data.skills || [];
         }
     }
 
-    let volunteers: Volunteer[] = [];
-    let specificVolunteers: Volunteer[] = []; 
-
-    async function matchVolunteers() {
+    async function fetchEvents() {
         const { data, error } = await supabase
-            .from('profiles') // Make sure this matches your table name
-            .select('id, full_name, availability, location, skills')
-            .order('id', { ascending: true });
-            if (error) {
+            .from('Event_Table')
+            .select(
+                `event_id, 
+                event_name, 
+                description, 
+                location, 
+                required_skill1, 
+                required_skill2, 
+                required_skill3, 
+                date, 
+                urgency, 
+                volunteers`
+            )
+            .order('date', { ascending: true });
+
+        if (error) {
             console.error('Error fetching events:', error.message);
             return;
-            }
-            console.log("Events fetched successfully:", data);
-            volunteers = data.map(volunteer => new Volunteer(
-                volunteer.id,
-                volunteer.full_name,
-                volunteer.availability,
-                volunteer.location,
-                volunteer.skills
-            ));
-            isLoading = false;
-      }
-      
-      matchVolunteers();
-
-      function filterSpecificVolunteer(stateM, dateM, skill1M, skill2M, skill3M) {
-            return volunteers.filter(volunteer => volunteer.location === stateM && volunteer.availability.includes(dateM) 
-            && volunteer.skills.includes(skill1M) && volunteer.skills.includes(skill2M) && volunteer.skills.includes(skill3M));
         }
-        
-  </script>
-  <div class="flex flex-col w-full max-w-4xl mx-auto mt-8 p-4">
+
+        events = data as Event[];
+        filterEventsBySkills();
+    }
+
+    function filterEventsBySkills() {
+        filteredEvents = events.filter(event => {
+            const eventSkills = [event.required_skill1, event.required_skill2, event.required_skill3].filter(Boolean);
+            return (
+                eventSkills.length === 0 ||
+                eventSkills.some(skill => userSkills.includes(skill!))
+            );
+        });
+    }
+
+    async function fetchVolunteersForEvent(event: Event) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, full_name, location, availability, skills');
+        if (error) {
+            console.error('Error fetching volunteers:', error.message);
+            return;
+        }
+        const eventSkills = [event.required_skill1, event.required_skill2, event.required_skill3].filter(Boolean);
+        const eventDate = event.date;
+        matchedVolunteers = (data as Volunteer[]).filter(volunteer => {
+            const hasRequiredSkills = eventSkills.every(skill => volunteer.skills?.includes(skill!));
+            const isAvailable = volunteer.availability?.includes(eventDate!);
+            return hasRequiredSkills && isAvailable;
+        });
+        selectedVolunteerIds = new Set(event.volunteers || []);
+    }
+
+
+    async function joinEvent(event: Event) {
+        if (!userId) return;
+        const updatedVolunteers = [...(event.volunteers || []), userId];
+        const { error } = await supabase
+            .from('Event_Table')
+            .update({ volunteers: updatedVolunteers })
+            .eq('event_id', event.event_id);
+        if (error) {
+            console.error('Error joining event:', error.message);
+            return;
+        }
+        event.volunteers = updatedVolunteers;
+        filteredEvents = [...filteredEvents];
+    }
+
+
+    async function leaveEvent(event: Event) {
+        if (!userId) return;
+        const updatedVolunteers = (event.volunteers || []).filter(id => id !== userId);
+        const { error } = await supabase
+            .from('Event_Table')
+            .update({ volunteers: updatedVolunteers })
+            .eq('event_id', event.event_id);
+        if (error) {
+            console.error('Error leaving event:', error.message);
+            return;
+        }
+        event.volunteers = updatedVolunteers;
+        filteredEvents = [...filteredEvents];
+    }
+
+
+    async function initialize() {
+        await fetchUserProfile();
+        await fetchEvents();
+        isLoading = false;
+    }
+
+    initialize();
+</script>
+
+<div class="flex flex-col w-full max-w-4xl mx-auto mt-8 p-4">
     {#if isLoading}
-    <div class="flex justify-center items-center h-48">
-      <div class="loader">Loading...</div>
-    </div>
-    {:else}
-    <h1 class="text-xl font-bold mb-10">Volunteer Matching For {role}</h1>
-        {#if role=="Volunteer"}
-            <h2 class="text-xl font-semibold mb-4">Matched Events</h2>
+        <div class="flex justify-center items-center h-48">
+            <span class="loading loading-spinner loading-lg"></span>
+        </div>
+    {:else if userRole === 'Organizer'}
+        <h1 class="text-2xl font-bold mb-4">Manage Volunteers for Events</h1>
+        <div class="form-control w-full mb-4">
+            <label class="label">
+                <span class="label-text">Select Event</span>
+            </label>
+            <select class="select select-bordered" bind:value={selectedEvent} on:change={() => selectedEvent && fetchVolunteersForEvent(selectedEvent)}>
+                <option disabled selected>Select an event</option>
+                {#each events as event}
+                    <option value={event}>{event.event_name} - {event.date}</option>
+                {/each}
+            </select>
+        </div>
+        {#if selectedEvent}
             <div class="overflow-x-auto">
-            <table class="table w-full bg-base-100">
-                <thead>
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>Volunteer ID</th>
+                            <th>Full Name</th>
+                            <th>Location</th>
+                            <th>Skills</th>
+                            <th>Availability</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each matchedVolunteers as volunteer}
+                            <tr>
+                                <td>{volunteer.id}</td>
+                                <td>{volunteer.full_name}</td>
+                                <td>{volunteer.location}</td>
+                                <td>{volunteer.skills?.join(', ')}</td>
+                                <td>{volunteer.availability?.join(', ')}</td>
+                                <td>
+                                    {#if selectedVolunteerIds.has(volunteer.id)}
+                                        <button class="btn btn-error btn-xs" on:click={() => removeVolunteerFromEvent(volunteer.id)}>
+                                            Remove
+                                        </button>
+                                    {:else}
+                                        <button class="btn btn-primary btn-xs" on:click={() => addVolunteerToEvent(volunteer.id)}>
+                                            Add
+                                        </button>
+                                    {/if}
+                                </td>
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
+            </div>
+        {:else}
+            <p class="text-gray-500 mt-4">Select an event to manage volunteers.</p>
+        {/if}
+    {:else if userRole === 'Volunteer'}
+    <h1 class="text-2xl font-bold mb-4">Matched Events</h1>
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead>
                 <tr>
                     <th>Event ID</th>
                     <th>Event Name</th>
                     <th>Description</th>
                     <th>Location</th>
-                    <th>Skill 1</th>
-                    <th>Skill 2</th>
-                    <th>Skill 3</th>
-                    <th>Urgency</th>
                     <th>Date</th>
-                    <th>Check (Toggle)</th>
+                    <th>Required Skills</th>
+                    <th>Action</th>
                 </tr>
-                </thead>
-                <tbody>
-                    {#each specificEvents as event}
-                        <tr>
-                            <td>{event.event_id}</td>
-                            <td>{event.eventName}</td>
-                            <td>{event.eventDescription}</td>
-                            <td>{event.location}</td>
-                            <td>{event.requiredSkill1}</td>
-                            <td>{event.requiredSkill2}</td>
-                            <td>{event.requiredSkill3}</td>
-                            <td>{event.urgency}</td>
-                            <td>{event.eventDate}</td>
-                            <td><input type="checkbox"/></td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-            </div>
-    {:else if role=="Organizer"}
-        <h2 class="text-xl font-semibold mb-4">Match Event with Volunteers</h2>
-        <label for="eventFilter" class="label">Event To Check:</label>
-            <select id="eventFilter" bind:value={eventToFilter} class="select select-bordered w-50" on:click={findVolunteers}>
-                {#each events as item}
-                    <option value={item}>Item Number {item.event_id}: {item.eventName} -- {item.eventDescription}</option>
-                {/each}
-            </select>
-        <div class="overflow-x-auto">
-        <table class="table w-full bg-base-100">
-            <thead>
-            <tr>
-                <th>Volunteer ID</th>
-                <th>Full Name</th>
-                <th>Location</th>
-                <th>Add Volunteer To Event</th>
-            </tr>
             </thead>
             <tbody>
-                {#each specificVolunteers as v}
+                {#each filteredEvents as event}
                     <tr>
-                        <td>{v.id}</td>
-                        <td>{v.fullName}</td>
-                        <td>{v.location}</td>
-                        <td><input type="checkbox"/></td>
+                        <td>{event.event_id}</td>
+                        <td>{event.event_name}</td>
+                        <td>{event.description}</td>
+                        <td>{event.location}</td>
+                        <td>{event.date}</td>
+                        <td>
+                            {#if event.required_skill1}{event.required_skill1}{/if}
+                            {#if event.required_skill2}, {event.required_skill2}{/if}
+                            {#if event.required_skill3}, {event.required_skill3}{/if}
+                        </td>
+                        <td>
+                            {#if event.volunteers && userId && event.volunteers.includes(userId)}
+                                <button class="btn btn-error btn-xs" on:click={() => leaveEvent(event)}>
+                                    Leave
+                                </button>
+                            {:else}
+                                <button class="btn btn-primary btn-xs" on:click={() => joinEvent(event)}>
+                                    Join
+                                </button>
+                            {/if}
+                        </td>
+                        
                     </tr>
                 {/each}
             </tbody>
         </table>
-        </div>
+    </div>
     {/if}
-    {/if}
-  </div>
+</div>
