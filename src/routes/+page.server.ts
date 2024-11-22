@@ -2,6 +2,14 @@
 import { fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 
+import { supabase } from "$lib/supabaseClient";
+
+export async function load({ locals }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  return { user };
+}
+
+
 export const actions: Actions = {
   default: async (event) => {
     const {

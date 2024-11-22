@@ -10,6 +10,9 @@
   let first_name = '';
   let last_name = '';
   let username = '';
+  let address = '';
+  let city = '';
+  let state = '';
   let role: 'Volunteer' | 'Organizer' = 'User';
   let email = '';
 
@@ -27,7 +30,7 @@
     if (user) {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name, full_name, username, availability, skills, role, email')
+        .select('first_name, last_name, full_name, username, availability, skills, role, email, address, city, state')
         .eq('id', user.id)
         .single();
 
@@ -38,6 +41,9 @@
         first_name = profile.first_name || '';
         last_name = profile.last_name || '';
         username = profile.username || '';
+        address = profile.address || '';
+        city = profile.city || '';
+        state = profile.state || '';
         tempAvailabilityDates = profile.availability || [];
         selectedSkills = profile.skills || [];
         role = profile.role || 'User';
@@ -63,7 +69,7 @@
       full_name = `${first_name} ${last_name}`;
       const { error } = await supabase
         .from('profiles')
-        .update({ first_name, last_name, full_name, username, availability: tempAvailabilityDates, skills: selectedSkills, role, email})
+        .update({ first_name, last_name, full_name, username, availability: tempAvailabilityDates, skills: selectedSkills, role, email, address, city, state})
         .eq('id', user.id);
 
       if (error) {
@@ -112,6 +118,18 @@
         <div class="form-control">
           <label for="last_name" class="label">Last Name:</label>
           <input id="last_name" type="text" bind:value={last_name} class="input input-bordered w-full" />
+        </div>
+        <div class="form-control">
+          <label for="address" class="label">Address:</label>
+          <input id="address" type="text" bind:value={address} class="input input-bordered w-full" />
+        </div>
+        <div class="form-control">
+          <label for="city" class="label">City:</label>
+          <input id="city" type="text" bind:value={city} class="input input-bordered w-full" />
+        </div>
+        <div class="form-control">
+          <label for="state" class="label">State:</label>
+          <input id="state" type="text" bind:value={state} class="input input-bordered w-full" />
         </div>
         <div class="form-control">
           <label for="username" class="label">Username:</label>
