@@ -170,17 +170,15 @@
             && volunteer.skills.includes(skill1M) && volunteer.skills.includes(skill2M) && volunteer.skills.includes(skill3M));
         }
         
-
   </script>
-  
   <div class="flex flex-col w-full max-w-4xl mx-auto mt-8 p-4">
     {#if isLoading}
     <div class="flex justify-center items-center h-48">
       <div class="loader">Loading...</div>
     </div>
     {:else}
-        {#if role=="Volunteer" || "volunteer"}
-            <h1 class="text-xl font-bold mb-10">Volunteer Matching For Volunteers</h1>
+    <h1 class="text-xl font-bold mb-10">Volunteer Matching For {role}</h1>
+        {#if role=="Volunteer"}
             <h2 class="text-xl font-semibold mb-4">Matched Events</h2>
             <div class="overflow-x-auto">
             <table class="table w-full bg-base-100">
@@ -216,9 +214,7 @@
                 </tbody>
             </table>
             </div>
-        {/if}
-    {#if role=="Organizer"}
-    <h1 class="text-xl font-bold mb-10">Volunteer Matching For Volunteers</h1>
+    {:else if role=="Organizer"}
         <h2 class="text-xl font-semibold mb-4">Match Event with Volunteers</h2>
         <label for="eventFilter" class="label">Event To Check:</label>
             <select id="eventFilter" bind:value={eventToFilter} class="select select-bordered w-50" on:click={findVolunteers}>
