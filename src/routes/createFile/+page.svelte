@@ -381,6 +381,11 @@
         </div>
     </div>
     {/if}
+    {#if role=="Volunteer"}
+    <div class="container">
+        <h2>You Do Not Have The Permission To Generate PDF and CSV with Event and Volunteer Data</h2>
+    </div>
+    {/if}
 </div>
   
   <style>
