@@ -4,6 +4,7 @@
     import { supabase } from "$lib/supabaseClient";
     import { goto } from "$app/navigation";
   
+    export let session: any;
     let email = '';
     let password = '';
     async function signInWithEmail() {
@@ -46,10 +47,13 @@
         const { error } = await supabase.auth.signOut()
         console.log(error)
 }
-
   </script>
   
   <body>
+    {#if !session?.user}
+    <div>You are Signed In!</div>
+    {:else}
+    
     <div class="flex justify-center">
       <div class="card w-96 bg-base-100 shadow-xl mt-20 mb-20">
         <div class="card-body">
@@ -71,5 +75,6 @@
         </div>
       </div>
     </div>
+    {/if}
   </body>
   

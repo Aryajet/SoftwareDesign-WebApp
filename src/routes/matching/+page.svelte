@@ -217,7 +217,7 @@
             </table>
             </div>
         {/if}
-    {#if role=="Organizer"}
+    {#if role=="Organizer" || "organizer"}
     <h1 class="text-xl font-bold mb-10">Volunteer Matching For Volunteers</h1>
         <h2 class="text-xl font-semibold mb-4">Match Event with Volunteers</h2>
         <label for="eventFilter" class="label">Event To Check:</label>

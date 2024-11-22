@@ -1,14 +1,10 @@
 <script lang="ts">
   import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
-	import type { PageData } from './$types';
 
   // Define the Event class to structure event properties
-  export let data: PageData;
-  let { user } = data;
-
   class Event {
-    event_id: number | undefined;
+    event_id: string;
     eventName: string;
     eventDescription: string;
     location: string;
@@ -17,6 +13,7 @@
     eventDate: string;
 
     constructor(event_id: string, eventName: string, eventDescription: string, location: string, requiredSkills: string[], urgency: string, eventDate: string) {
+      this.event_id = event_id;
       this.eventName = eventName;
       this.eventDescription = eventDescription;
       this.location = location;
@@ -76,8 +73,7 @@
       required_skill2: requiredSkills[1] || null,
       required_skill3: requiredSkills[2] || null,
       urgency: urgency,
-      date: eventDate,
-      creator_id: user?.id
+      date: eventDate
     };
 
     console.log("Inserting event into Supabase:", newEvent);
@@ -86,7 +82,6 @@
       .insert([newEvent]);
 
     if (error) {
-      console.log(data)
       console.error('Error adding event:', error.message);
     } else {
       console.log("Event added successfully:", data);
@@ -126,7 +121,6 @@
   onMount(() => {
     fetchEvents();
   });
-
 </script>
 
 <!-- HTML Template to display events -->
