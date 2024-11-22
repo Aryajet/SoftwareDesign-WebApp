@@ -1,5 +1,5 @@
 <script>
-	import { supabase } from "$lib/supabaseClient";
+  import { supabase } from "$lib/supabaseClient";
 
   // Reactive variables
   let eventHistory2 = [];
@@ -8,7 +8,7 @@
 
   // Fetch data from Supabase
   async function fetchEvents() {
-    const { data, error } = await supabase
+    const { data: events, error: eventError } = await supabase
       .from('Event_Table')
       .select(`
         event_id,
@@ -22,24 +22,45 @@
         location
       `);
 
-    if (error) {
-      console.error('Error fetching events:', error);
+    if (eventError) {
+      console.error('Error fetching events:', eventError);
       return;
     }
 
-    // Map Supabase data to match UI expectations
-    eventHistory2 = data.map(event => ({
-      id: event.event_id,
-      name: 'Unknown', // Placeholder, replace with actual user data if needed
-      event: event.event_name,
-      description: event.description,
-      date: event.date,
-      urgency: event.urgency,
-      skills: [event.required_skill1, event.required_skill2, event.required_skill3].filter(Boolean),
-      location: event.location,
-      participation: 'Unknown', // Placeholder
-      performance: null // Placeholder
-    }));
+    // Fetch profiles to match with event participants
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        full_name,
+        event_history
+      `);
+
+    if (profileError) {
+      console.error('Error fetching profiles:', profileError);
+      return;
+    }
+
+    // Map events to include volunteer data where available
+    eventHistory2 = events.map(event => {
+      // Find matching profiles based on event history
+      const participants = profiles.filter(profile =>
+        profile.event_history?.includes(event.event_id)
+      );
+
+      return {
+        id: event.event_id,
+        name: participants.map(p => p.full_name).join(', ') || 'No Participants',
+        event: event.event_name,
+        description: event.description,
+        date: event.date,
+        urgency: event.urgency,
+        skills: [event.required_skill1, event.required_skill2, event.required_skill3].filter(Boolean),
+        location: event.location,
+        participation: participants.length > 0 ? 'Participated' : 'No Participation',
+        performance: participants.length > 0 ? 'Unknown' : 'N/A' // Placeholder for performance data
+      };
+    });
   }
 
   // Filtering functions
