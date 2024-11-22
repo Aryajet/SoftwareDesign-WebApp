@@ -6,6 +6,7 @@
     
       export let data: PageData;
       let { user } = data;
+      let isLoading = true;
     
       // Variables for profile information
       let full_name = '';
@@ -18,14 +19,14 @@
       let tempAvailabilityDates: string[] = [];
       // Variables for skills
       let selectedSkills: string[] = [];
-      let state1 = 'Texas';
+      let state = 'Texas';
     
       async function loadProfile() 
       {
         if (user) {
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('first_name, last_name, full_name, username, availability, skills, role, email')
+            .select('first_name, last_name, full_name, username, availability, skills, role, email, state')
             .eq('id', user.id)
             .single();
     
@@ -40,6 +41,7 @@
             selectedSkills = [...(profile.skills || []), null];
             role = profile.role || '';
             email = user.user_metadata.email || '';
+            state = profile.state;
           }
         }
       }
@@ -97,12 +99,14 @@
                 event.date
             ));
             specificEvents = filterSpecificEvent();
+            isLoading = false;
+            //specificEvents = events;
       }
       
       matchEvents();
 
       function filterSpecificEvent() {
-            return events.filter(event => event.location === state1 && tempAvailabilityDates.includes(event.eventDate)
+            return events.filter(event => event.location === state && tempAvailabilityDates.includes(event.eventDate)
              && selectedSkills.includes(event.requiredSkill1) && selectedSkills.includes(event.requiredSkill2) && selectedSkills.includes(event.requiredSkill3));
         }
 
@@ -156,6 +160,7 @@
                 volunteer.location,
                 volunteer.skills
             ));
+            isLoading = false;
       }
       
       matchVolunteers();
@@ -169,47 +174,51 @@
   </script>
   
   <div class="flex flex-col w-full max-w-4xl mx-auto mt-8 p-4">
-
-    {#if role=="Volunteer"}
-        <h2 class="text-xl font-semibold mb-4">Matched Events</h2>
-        <div class="overflow-x-auto">
-        <table class="table w-full bg-base-100">
-            <thead>
-            <tr>
-                <th>Event ID</th>
-                <th>Event Name</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Skill 1</th>
-                <th>Skill 2</th>
-                <th>Skill 3</th>
-                <th>Urgency</th>
-                <th>Date</th>
-                <th>Check (Toggle)</th>
-            </tr>
-            </thead>
-            <tbody>
-                {#each specificEvents as event}
-                    <tr>
-                        <td>{event.event_id}</td>
-                        <td>{event.eventName}</td>
-                        <td>{event.eventDescription}</td>
-                        <td>{event.location}</td>
-                        <td>{event.requiredSkill1}</td>
-                        <td>{event.requiredSkill2}</td>
-                        <td>{event.requiredSkill3}</td>
-                        <td>{event.urgency}</td>
-                        <td>{event.eventDate}</td>
-                        <td><input type="checkbox"/></td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-        </div>
-    {/if}
-    
+    {#if isLoading}
+    <div class="flex justify-center items-center h-48">
+      <div class="loader">Loading...</div>
+    </div>
+    {:else}
+        {#if role=="Volunteer" || "volunteer"}
+            <h1 class="text-xl font-bold mb-10">Volunteer Matching For Volunteers</h1>
+            <h2 class="text-xl font-semibold mb-4">Matched Events</h2>
+            <div class="overflow-x-auto">
+            <table class="table w-full bg-base-100">
+                <thead>
+                <tr>
+                    <th>Event ID</th>
+                    <th>Event Name</th>
+                    <th>Description</th>
+                    <th>Location</th>
+                    <th>Skill 1</th>
+                    <th>Skill 2</th>
+                    <th>Skill 3</th>
+                    <th>Urgency</th>
+                    <th>Date</th>
+                    <th>Check (Toggle)</th>
+                </tr>
+                </thead>
+                <tbody>
+                    {#each specificEvents as event}
+                        <tr>
+                            <td>{event.event_id}</td>
+                            <td>{event.eventName}</td>
+                            <td>{event.eventDescription}</td>
+                            <td>{event.location}</td>
+                            <td>{event.requiredSkill1}</td>
+                            <td>{event.requiredSkill2}</td>
+                            <td>{event.requiredSkill3}</td>
+                            <td>{event.urgency}</td>
+                            <td>{event.eventDate}</td>
+                            <td><input type="checkbox"/></td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+            </div>
+        {/if}
     {#if role=="Organizer"}
-        <div></div>
+    <h1 class="text-xl font-bold mb-10">Volunteer Matching For Volunteers</h1>
         <h2 class="text-xl font-semibold mb-4">Match Event with Volunteers</h2>
         <label for="eventFilter" class="label">Event To Check:</label>
             <select id="eventFilter" bind:value={eventToFilter} class="select select-bordered w-50" on:click={findVolunteers}>
@@ -239,5 +248,6 @@
             </tbody>
         </table>
         </div>
+    {/if}
     {/if}
   </div>
