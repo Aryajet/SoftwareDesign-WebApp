@@ -32,7 +32,6 @@
     let selectedVolunteerIds: Set<string> = new Set();
     let isLoading = true;
 
-
     async function fetchUserProfile() {
         const { data: user, error } = await supabase.auth.getUser();
         if (error) {
@@ -58,7 +57,6 @@
             userSkills = data.skills || [];
         }
     }
-
     async function fetchEvents() {
         const { data, error } = await supabase
             .from('Event_Table')
@@ -84,67 +82,111 @@
         events = data as Event[];
         filterEventsBySkills();
     }
-
     function filterEventsBySkills() {
         filteredEvents = events.filter(event => {
             const eventSkills = [event.required_skill1, event.required_skill2, event.required_skill3].filter(Boolean);
             return (
-                eventSkills.length === 0 ||
+                eventSkills.length === 0 || 
                 eventSkills.some(skill => userSkills.includes(skill!))
             );
         });
     }
-
     async function fetchVolunteersForEvent(event: Event) {
         const { data, error } = await supabase
             .from('profiles')
             .select('id, full_name, location, availability, skills');
+
         if (error) {
             console.error('Error fetching volunteers:', error.message);
             return;
         }
+
         const eventSkills = [event.required_skill1, event.required_skill2, event.required_skill3].filter(Boolean);
         const eventDate = event.date;
+
         matchedVolunteers = (data as Volunteer[]).filter(volunteer => {
             const hasRequiredSkills = eventSkills.every(skill => volunteer.skills?.includes(skill!));
             const isAvailable = volunteer.availability?.includes(eventDate!);
             return hasRequiredSkills && isAvailable;
         });
+
         selectedVolunteerIds = new Set(event.volunteers || []);
     }
+    async function addVolunteerToEvent(volunteerId: string) {
+        if (!selectedEvent) return;
 
+        const updatedVolunteers = [...(selectedEvent.volunteers || []), volunteerId];
 
+        const { error } = await supabase
+            .from('Event_Table')
+            .update({ volunteers: updatedVolunteers })
+            .eq('event_id', selectedEvent.event_id);
+
+        if (error) {
+            console.error('Error adding volunteer:', error.message);
+            return;
+        }
+
+        selectedEvent.volunteers = updatedVolunteers;
+        selectedVolunteerIds.add(volunteerId);
+        matchedVolunteers = [...matchedVolunteers];
+    }
+    async function removeVolunteerFromEvent(volunteerId: string) {
+        if (!selectedEvent) return;
+
+        const updatedVolunteers = (selectedEvent.volunteers || []).filter(id => id !== volunteerId);
+
+        const { error } = await supabase
+            .from('Event_Table')
+            .update({ volunteers: updatedVolunteers })
+            .eq('event_id', selectedEvent.event_id);
+
+        if (error) {
+            console.error('Error removing volunteer:', error.message);
+            return;
+        }
+
+        selectedEvent.volunteers = updatedVolunteers;
+        selectedVolunteerIds.delete(volunteerId);
+        matchedVolunteers = [...matchedVolunteers];
+    }
     async function joinEvent(event: Event) {
         if (!userId) return;
+
         const updatedVolunteers = [...(event.volunteers || []), userId];
+
         const { error } = await supabase
             .from('Event_Table')
             .update({ volunteers: updatedVolunteers })
             .eq('event_id', event.event_id);
+
         if (error) {
             console.error('Error joining event:', error.message);
             return;
         }
+
         event.volunteers = updatedVolunteers;
         filteredEvents = [...filteredEvents];
     }
 
-
     async function leaveEvent(event: Event) {
         if (!userId) return;
+
         const updatedVolunteers = (event.volunteers || []).filter(id => id !== userId);
+
         const { error } = await supabase
             .from('Event_Table')
             .update({ volunteers: updatedVolunteers })
             .eq('event_id', event.event_id);
+
         if (error) {
             console.error('Error leaving event:', error.message);
             return;
         }
+
         event.volunteers = updatedVolunteers;
         filteredEvents = [...filteredEvents];
     }
-
 
     async function initialize() {
         await fetchUserProfile();
@@ -154,6 +196,7 @@
 
     initialize();
 </script>
+
 
 <div class="flex flex-col w-full max-w-4xl mx-auto mt-8 p-4">
     {#if isLoading}
@@ -214,49 +257,48 @@
             <p class="text-gray-500 mt-4">Select an event to manage volunteers.</p>
         {/if}
     {:else if userRole === 'Volunteer'}
-    <h1 class="text-2xl font-bold mb-4">Matched Events</h1>
-    <div class="overflow-x-auto">
-        <table class="table w-full">
-            <thead>
-                <tr>
-                    <th>Event ID</th>
-                    <th>Event Name</th>
-                    <th>Description</th>
-                    <th>Location</th>
-                    <th>Date</th>
-                    <th>Required Skills</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each filteredEvents as event}
+        <h1 class="text-2xl font-bold mb-4">Matched Events</h1>
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
                     <tr>
-                        <td>{event.event_id}</td>
-                        <td>{event.event_name}</td>
-                        <td>{event.description}</td>
-                        <td>{event.location}</td>
-                        <td>{event.date}</td>
-                        <td>
-                            {#if event.required_skill1}{event.required_skill1}{/if}
-                            {#if event.required_skill2}, {event.required_skill2}{/if}
-                            {#if event.required_skill3}, {event.required_skill3}{/if}
-                        </td>
-                        <td>
-                            {#if event.volunteers && userId && event.volunteers.includes(userId)}
-                                <button class="btn btn-error btn-xs" on:click={() => leaveEvent(event)}>
-                                    Leave
-                                </button>
-                            {:else}
-                                <button class="btn btn-primary btn-xs" on:click={() => joinEvent(event)}>
-                                    Join
-                                </button>
-                            {/if}
-                        </td>
-                        
+                        <th>Event ID</th>
+                        <th>Event Name</th>
+                        <th>Description</th>
+                        <th>Location</th>
+                        <th>Date</th>
+                        <th>Required Skills</th>
+                        <th>Action</th>
                     </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody>
+                    {#each filteredEvents as event}
+                        <tr>
+                            <td>{event.event_id}</td>
+                            <td>{event.event_name}</td>
+                            <td>{event.description}</td>
+                            <td>{event.location}</td>
+                            <td>{event.date}</td>
+                            <td>
+                                {#if event.required_skill1}{event.required_skill1}{/if}
+                                {#if event.required_skill2}, {event.required_skill2}{/if}
+                                {#if event.required_skill3}, {event.required_skill3}{/if}
+                            </td>
+                            <td>
+                                {#if event.volunteers && event.volunteers.includes(userId)}
+                                    <button class="btn btn-error btn-xs" on:click={() => leaveEvent(event)}>
+                                        Leave
+                                    </button>
+                                {:else}
+                                    <button class="btn btn-primary btn-xs" on:click={() => joinEvent(event)}>
+                                        Join
+                                    </button>
+                                {/if}
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
     {/if}
 </div>
